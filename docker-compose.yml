@@ -1,0 +1,59 @@
+version: "3.7"
+
+services:
+
+  postgis:
+    image: postgis/postgis:12-master
+    container_name: postgis
+    hostname: postgis
+    ports:
+      - 5432:5432
+    environment:
+      POSTGRES_USER: dbuser
+      POSTGRES_PASSWORD: dbpass
+      POSTGRES_DB: 2TICKET
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U dbuser -d 2TICKET"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    volumes:
+      - ./dockers/postgre:/docker-entrypoint-initdb.d
+    networks:
+      - ticket_net
+
+  tensorflow:
+    image: tensorflow/tensorflow:nightly-py3-jupyter
+
+    entrypoint: ["jupyter", "notebook", "--notebook-dir=/tf", "--ip=0.0.0.0", "--NotebookApp.token=''", "--no-browser", "--allow-root"]
+    container_name: tensorflow
+    hostname: tensorflow
+    environment:
+      JUPYTER_TOKEN: ''
+    volumes:
+      - ./dockers/tensorflow/data:/tf/data
+      - ./dockers/tensorflow/notebooks:/tf/notebooks
+    ports:
+      - "8888:8888"
+    networks:
+      - ticket_net
+
+  server:
+    build: ./dockers/flask
+    container_name: server
+    hostname: server
+    working_dir: /opt/server
+    command: python server.py
+    volumes:
+      - ./dockers/flask/server:/opt/server
+    ports:
+      - "8080:8080"
+    networks:
+      - ticket_net
+
+
+networks:
+  ticket_net:
+    name: 2ticket_net
+
+
